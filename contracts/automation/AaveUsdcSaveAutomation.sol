@@ -35,6 +35,13 @@ contract AaveUsdcSaveAutomation is Ownable {
         emit UsdcDepositedToAave(_user, amount);
     }
 
+    function depositUsdcToAaveBatch(address[] calldata _users, uint256[] calldata amounts) public onlyBot {
+        require(_users.length == amounts.length, "invalid input");
+        for (uint256 i = 0; i < _users.length; i++) {
+            depositUsdcToAave(_users[i], amounts[i]);
+        }
+    }
+
     function addBot(address bot) public onlyOwner {
         bots[bot] = true;
         emit BotAdded(bot);
