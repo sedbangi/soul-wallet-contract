@@ -28,17 +28,18 @@ contract ClaimInterestTest is Test {
         (address user, uint256 userKey) = makeAddrAndKey("user");
         // test user can claim 100 usdc interest
         uint256 userNonce = claimInterest.nonces(user);
-        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce));
+        uint256 expiredTime = block.timestamp + 1 days;
+        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce, expiredTime));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.startBroadcast(userKey);
         assertEq(token.balanceOf(user), 0);
-        claimInterest.claimInterest(100e6, userNonce, signature);
+        claimInterest.claimInterest(100e6, userNonce, expiredTime, signature);
         assertEq(token.balanceOf(user), 100e6);
         // should not be able to claim again with the same nonce
         vm.expectRevert();
-        claimInterest.claimInterest(100e6, userNonce, signature);
+        claimInterest.claimInterest(100e6, userNonce, expiredTime, signature);
         vm.stopBroadcast();
     }
 
@@ -48,14 +49,30 @@ contract ClaimInterestTest is Test {
         vm.prank(signer);
         // force increment nonce
         claimInterest.incrementNonce(user);
-        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce));
+        uint256 expiredTime = block.timestamp + 1 days;
+        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce, expiredTime));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.startBroadcast(userKey);
         assertEq(token.balanceOf(user), 0);
         vm.expectRevert();
-        claimInterest.claimInterest(100e6, userNonce, signature);
+        claimInterest.claimInterest(100e6, userNonce, expiredTime, signature);
+        vm.stopBroadcast();
+    }
+
+    function test_expired_signature() public {
+        (address user, uint256 userKey) = makeAddrAndKey("user");
+        uint256 userNonce = claimInterest.nonces(user);
+        uint256 expiredTime = block.timestamp - 1;
+        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce, expiredTime));
+        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(message);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.startBroadcast(userKey);
+        assertEq(token.balanceOf(user), 0);
+        vm.expectRevert("Signature expired");
+        claimInterest.claimInterest(100e6, userNonce, expiredTime, signature);
         vm.stopBroadcast();
     }
 

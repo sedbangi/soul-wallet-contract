@@ -30,9 +30,10 @@ contract ClaimInterest is Ownable {
      * @param interestAmount The amount of interest to claim.
      * @param signature The signature from the signer.
      */
-    function claimInterest(uint256 interestAmount, uint256 nonce, bytes memory signature) public {
+    function claimInterest(uint256 interestAmount, uint256 nonce, uint256 expiryTime, bytes memory signature) public {
         require(nonce == nonces[msg.sender], "Invalid nonce");
-        bytes32 message = keccak256(abi.encodePacked(msg.sender, interestAmount, nonce));
+        require(block.timestamp <= expiryTime, "Signature expired");
+        bytes32 message = keccak256(abi.encodePacked(msg.sender, interestAmount, nonce, expiryTime));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(message);
         require(ethSignedMessageHash.recover(signature) == signer, "Invalid signature");
         nonces[msg.sender] += 1; // Increment nonce for the user
