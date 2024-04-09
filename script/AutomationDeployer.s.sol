@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Script.sol";
 import "./DeployHelper.sol";
 import "@source/automation/AaveUsdcSaveAutomation.sol";
+import "@source/automation/ClaimInterest.sol";
 
 contract AutomationDeployer is Script, DeployHelper {
     address automationOwner;
@@ -40,7 +41,7 @@ contract AutomationDeployer is Script, DeployHelper {
             delpoyBaseSepolia();
         } else if (network == Network.Optimism) {
             console.log("deploy automation contract on OP mainnet");
-            delpoyOp();
+            delpoyOpClaimInterest();
         } else {
             console.log("deploy automation contract on testnet");
             deploy();
@@ -93,6 +94,18 @@ contract AutomationDeployer is Script, DeployHelper {
             bytes.concat(type(AaveUsdcSaveAutomation).creationCode, abi.encode(automationOwner, usdc, aaveUscPool))
         );
         writeAddressToEnv("SOUL_WALLET_AAVE_USDC_AUTOMATION_OP_MAINNET", aaveUsdcAutomation);
+    }
+
+    function delpoyOpClaimInterest() private {
+        address usdc = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;
+        address claimInterest = deploy(
+            "ClaimInterestOpMainnet",
+            bytes.concat(
+                type(ClaimInterest).creationCode,
+                abi.encode(automationOwner, "0xf4bF967767Cc55dd73EF19E1DA7b58A1B39f0782", usdc)
+            )
+        );
+        writeAddressToEnv("CLAIM_INTEREST_OP_MAINNET", claimInterest);
     }
 
     function delpoyBaseSepolia() private {

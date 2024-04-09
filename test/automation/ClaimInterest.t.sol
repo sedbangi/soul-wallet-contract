@@ -29,7 +29,11 @@ contract ClaimInterestTest is Test {
         // test user can claim 100 usdc interest
         uint256 userNonce = claimInterest.nonces(user);
         uint256 expiredTime = block.timestamp + 1 days;
-        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce, expiredTime));
+        bytes32 message = keccak256(
+            abi.encodePacked(
+                user, uint256(100e6), userNonce, expiredTime, address(claimInterest), claimInterest.getChainId()
+            )
+        );
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -50,7 +54,11 @@ contract ClaimInterestTest is Test {
         // force increment nonce
         claimInterest.incrementNonce(user);
         uint256 expiredTime = block.timestamp + 1 days;
-        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce, expiredTime));
+        bytes32 message = keccak256(
+            abi.encodePacked(
+                user, uint256(100e6), userNonce, expiredTime, address(claimInterest), claimInterest.getChainId()
+            )
+        );
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -65,7 +73,11 @@ contract ClaimInterestTest is Test {
         (address user, uint256 userKey) = makeAddrAndKey("user");
         uint256 userNonce = claimInterest.nonces(user);
         uint256 expiredTime = block.timestamp - 1;
-        bytes32 message = keccak256(abi.encodePacked(user, uint256(100e6), userNonce, expiredTime));
+        bytes32 message = keccak256(
+            abi.encodePacked(
+                user, uint256(100e6), userNonce, expiredTime, address(claimInterest), claimInterest.getChainId()
+            )
+        );
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -78,11 +90,12 @@ contract ClaimInterestTest is Test {
 
     function test_change_signer() public {
         vm.startBroadcast(ownerKey);
-        address oldSigner = claimInterest.signer();
-        assertEq(oldSigner, signer);
+        claimInterest.signers(signer);
+        assertEq(claimInterest.signers(signer), true);
         address newSigner = makeAddr("newSigner");
-        claimInterest.changeSigner(newSigner);
-        address currentSigner = claimInterest.signer();
-        assertEq(currentSigner, newSigner);
+        claimInterest.changeSigner(newSigner, true);
+        claimInterest.changeSigner(signer, false);
+        assertEq(claimInterest.signers(newSigner), true);
+        assertEq(claimInterest.signers(signer), false);
     }
 }
