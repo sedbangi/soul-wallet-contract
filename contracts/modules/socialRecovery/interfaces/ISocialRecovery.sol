@@ -5,8 +5,8 @@ interface ISocialRecovery {
     struct SocialRecoveryInfo {
         bytes32 guardianHash;
         uint256 nonce;
-        // transaction id to transaction valid time
-        mapping(bytes32 id => uint256) txValidAt;
+        // id to operation valid time
+        mapping(bytes32 id => uint256) operationValidAt;
         uint256 delayPeriod;
     }
 
@@ -16,7 +16,7 @@ interface ISocialRecovery {
      * @notice  .
      * @dev     .
      * @param   wallet to recovery
-     * @param   newRawOwners abi.encode(address[] owners)
+     * @param   newOwners bytes32[] owners
      * @param   rawGuardian abi.encode(GuardianData)
      *  struct GuardianData {
      *     address[] guardians;
@@ -26,23 +26,18 @@ interface ISocialRecovery {
      * @param   guardianSignature  .
      * @return  recoveryId  .
      */
-    function scheduleReocvery(
+    function scheduleRecovery(
         address wallet,
-        bytes calldata newRawOwners,
+        bytes32[] calldata newOwners,
         bytes calldata rawGuardian,
         bytes calldata guardianSignature
     ) external returns (bytes32 recoveryId);
 
-    function executeReocvery(
-        address wallet,
-        bytes calldata newRawOwners,
-        bytes calldata rawGuardian,
-        bytes calldata guardianSignature
-    ) external;
+    function executeRecovery(address wallet, bytes32[] calldata newOwners) external;
 
     function setGuardian(bytes32 newGuardianHash) external;
     function setDelayPeriod(uint256 newDelay) external;
-    function cancelReocvery(bytes32 recoveryId) external;
+    function cancelRecovery(bytes32 recoveryId) external;
 
     enum OperationState {
         Unset,

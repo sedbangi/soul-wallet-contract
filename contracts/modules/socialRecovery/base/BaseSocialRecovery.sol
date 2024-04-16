@@ -13,12 +13,12 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
     event GuardianSet(address wallet, bytes32 newGuardianHash);
     event DelayPeriodSet(address wallet, uint256 newDelay);
     event RecoveryCancelled(address wallet, bytes32 recoveryId);
-    event RecoveryScheduled(address wallet, bytes32 recoveryId, uint256 txValidTime);
+    event RecoveryScheduled(address wallet, bytes32 recoveryId, uint256 operationValidTime);
     event RecoveryExecuted(address wallet, bytes32 recoveryId);
     event ApproveHash(address indexed guardian, bytes32 hash);
     event RejectHash(address indexed guardian, bytes32 hash);
 
-    error UN_EXPECTED_OPERATION_STATE(address wallet, bytes32 recoveryId, bytes32 expectedStates);
+    error UNEXPECTED_OPERATION_STATE(address wallet, bytes32 recoveryId, bytes32 expectedStates);
     error HASH_ALREADY_APPROVED();
     error GUARDIAN_SIGNATURE_INVALID();
     error HASH_ALREADY_REJECTED();
@@ -35,7 +35,7 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
     }
 
     function getOperationState(address wallet, bytes32 id) public view returns (OperationState) {
-        uint256 timestamp = getTxValidTime(wallet, id);
+        uint256 timestamp = getOperationValidTime(wallet, id);
         if (timestamp == 0) {
             return OperationState.Unset;
         } else if (timestamp == _DONE_TIMESTAMP) {
@@ -46,22 +46,32 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
             return OperationState.Ready;
         }
     }
+    /**
+     * @dev Returns whether an operation is pending or not. Note that a "pending" operation may also be "ready".
+     */
 
     function isOperationPending(address wallet, bytes32 id) public view returns (bool) {
         OperationState state = getOperationState(wallet, id);
         return state == OperationState.Waiting || state == OperationState.Ready;
     }
+    /**
+     * @dev Returns whether an operation is ready for execution. Note that a "ready" operation is also "pending".
+     */
 
     function isOperationReady(address wallet, bytes32 id) public view returns (bool) {
         return getOperationState(wallet, id) == OperationState.Ready;
     }
+    /**
+     * @dev Returns whether an id corresponds to a registered operation. This
+     * includes both Waiting, Ready, and Done operations.
+     */
 
     function isOperationSet(address wallet, bytes32 id) public view returns (bool) {
         return getOperationState(wallet, id) != OperationState.Unset;
     }
 
-    function getTxValidTime(address wallet, bytes32 id) public view returns (uint256) {
-        return socialRecoveryInfo[wallet].txValidAt[id];
+    function getOperationValidTime(address wallet, bytes32 id) public view returns (uint256) {
+        return socialRecoveryInfo[wallet].operationValidAt[id];
     }
 
     function setGuardian(bytes32 newGuardianHash) external {
@@ -78,22 +88,22 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         emit DelayPeriodSet(wallet, newDelay);
     }
 
-    function cancelReocvery(bytes32 recoveryId) external {
+    function cancelRecovery(bytes32 recoveryId) external {
         address wallet = _msgSender();
         if (!isOperationPending(wallet, recoveryId)) {
-            revert UN_EXPECTED_OPERATION_STATE(
+            revert UNEXPECTED_OPERATION_STATE(
                 wallet,
                 recoveryId,
                 _encodeStateBitmap(OperationState.Waiting) | _encodeStateBitmap(OperationState.Ready)
             );
         }
 
-        delete socialRecoveryInfo[wallet].txValidAt[recoveryId];
+        delete socialRecoveryInfo[wallet].operationValidAt[recoveryId];
         _increaseNonce(wallet);
         emit RecoveryCancelled(wallet, recoveryId);
     }
 
-    function cancelAllReocvery() external {
+    function cancelAllRecovery() external {
         address wallet = _msgSender();
         _increaseNonce(wallet);
         emit RecoveryCancelled(wallet, 0);
@@ -120,36 +130,29 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         emit RejectHash(msg.sender, hash);
     }
 
-    function scheduleReocvery(
+    function scheduleRecovery(
         address wallet,
-        bytes calldata newRawOwners,
+        bytes32[] calldata newOwners,
         bytes calldata rawGuardian,
         bytes calldata guardianSignature
     ) external override returns (bytes32 recoveryId) {
-        recoveryId =
-            hashOperation(wallet, walletNonce(wallet), abi.encode(newRawOwners, rawGuardian, guardianSignature));
+        recoveryId = hashOperation(wallet, walletNonce(wallet), abi.encode(newOwners));
         if (isOperationSet(wallet, recoveryId)) {
-            revert UN_EXPECTED_OPERATION_STATE(wallet, recoveryId, _encodeStateBitmap(OperationState.Unset));
+            revert UNEXPECTED_OPERATION_STATE(wallet, recoveryId, _encodeStateBitmap(OperationState.Unset));
         }
         bytes32 guardianHash = _getGuardianHash(rawGuardian);
         _checkGuardianHash(wallet, guardianHash);
-        _verifyGuardianSignature(wallet, walletNonce(wallet), newRawOwners, rawGuardian, guardianSignature);
+        _verifyGuardianSignature(wallet, walletNonce(wallet), newOwners, rawGuardian, guardianSignature);
         uint256 scheduleTime = _setTimeStamp(wallet, recoveryId);
         emit RecoveryScheduled(wallet, recoveryId, scheduleTime);
     }
 
-    function executeReocvery(
-        address wallet,
-        bytes calldata newRawOwners,
-        bytes calldata rawGuardian,
-        bytes calldata guardianSignature
-    ) external override {
-        bytes32 recoveryId =
-            hashOperation(wallet, walletNonce(wallet), abi.encode(newRawOwners, rawGuardian, guardianSignature));
+    function executeRecovery(address wallet, bytes32[] calldata newOwners) external override {
+        bytes32 recoveryId = hashOperation(wallet, walletNonce(wallet), abi.encode(newOwners));
         if (!isOperationReady(wallet, recoveryId)) {
-            revert UN_EXPECTED_OPERATION_STATE(wallet, recoveryId, _encodeStateBitmap(OperationState.Ready));
+            revert UNEXPECTED_OPERATION_STATE(wallet, recoveryId, _encodeStateBitmap(OperationState.Ready));
         }
-        _recoveryOwner(wallet, newRawOwners);
+        _recoveryOwner(wallet, newOwners);
 
         _setRecoveryDone(wallet, recoveryId);
         _increaseNonce(wallet);
@@ -157,23 +160,21 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
     }
 
     function _setRecoveryDone(address wallet, bytes32 recoveryId) internal {
-        socialRecoveryInfo[wallet].txValidAt[recoveryId] = _DONE_TIMESTAMP;
+        socialRecoveryInfo[wallet].operationValidAt[recoveryId] = _DONE_TIMESTAMP;
     }
 
-    function _recoveryOwner(address wallet, bytes calldata newRawOwners) internal {
-        bytes32[] memory owners = abi.decode(newRawOwners, (bytes32[]));
+    function _recoveryOwner(address wallet, bytes32[] memory newOwners) internal {
         ISoulWallet soulwallet = ISoulWallet(payable(wallet));
-        soulwallet.resetOwners(owners);
+        soulwallet.resetOwners(newOwners);
     }
 
     function _verifyGuardianSignature(
         address wallet,
         uint256 nonce,
-        bytes calldata newRawOwners,
+        bytes32[] calldata newOwners,
         bytes calldata rawGuardian,
         bytes calldata guardianSignature
     ) internal view {
-        address[] memory newOwners = abi.decode(newRawOwners, (address[]));
         bytes32 digest = _hashTypedDataV4(
             keccak256(abi.encode(_TYPE_HASH_SOCIAL_RECOVERY, wallet, nonce, keccak256(abi.encodePacked(newOwners))))
         );
@@ -346,7 +347,7 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
 
     function _setTimeStamp(address wallet, bytes32 id) internal returns (uint256) {
         uint256 scheduleTime = block.timestamp + socialRecoveryInfo[wallet].delayPeriod;
-        socialRecoveryInfo[wallet].txValidAt[id] = scheduleTime;
+        socialRecoveryInfo[wallet].operationValidAt[id] = scheduleTime;
         return scheduleTime;
     }
 

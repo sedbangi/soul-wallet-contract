@@ -88,7 +88,7 @@ contract SocialRecoveryModuleTest is Test {
         private
         returns (
             address wallet,
-            bytes memory newRawOwners,
+            bytes32[] memory owners,
             bytes memory rawGuardian,
             bytes memory guardianSignature,
             bytes32 recoveryId
@@ -112,15 +112,15 @@ contract SocialRecoveryModuleTest is Test {
         console.log("guardianData2");
         console.logBytes(abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt));
 
-        recoveryId = socialRecoveryModule.scheduleReocvery(
+        recoveryId = socialRecoveryModule.scheduleRecovery(
             address(soulWallet),
-            abi.encode(newOwners),
+            newOwners,
             abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt),
             guardianSig
         );
         return (
             address(soulWallet),
-            abi.encode(newOwners),
+            newOwners,
             abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt),
             guardianSig,
             recoveryId
@@ -128,19 +128,19 @@ contract SocialRecoveryModuleTest is Test {
     }
 
     function test_executeSocialRecovery() public {
-        (address wallet, bytes memory newRawOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
+        (address wallet, bytes32[] memory newOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
             scheduleSocialReocery();
         vm.warp(block.timestamp + delayTime);
-        socialRecoveryModule.executeReocvery(wallet, newRawOwners, rawGuardian, guardianSignature);
+        socialRecoveryModule.executeRecovery(wallet, newOwners);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), true);
         assertEq(soulWallet.isOwner(_owner.toBytes32()), false);
     }
 
     function test_executeSocialRecoveryNotInReadyState() public {
-        (address wallet, bytes memory newRawOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
+        (address wallet, bytes32[] memory newOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
             scheduleSocialReocery();
         vm.expectRevert();
-        socialRecoveryModule.executeReocvery(wallet, newRawOwners, rawGuardian, guardianSignature);
+        socialRecoveryModule.executeRecovery(wallet, newOwners);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), false);
         assertEq(soulWallet.isOwner(_owner.toBytes32()), true);
     }
@@ -148,7 +148,7 @@ contract SocialRecoveryModuleTest is Test {
     function test_cancelSocialRecovery() public {
         (
             address wallet,
-            bytes memory newRawOwners,
+            bytes32[] memory newOwners,
             bytes memory rawGuardian,
             bytes memory guardianSignature,
             bytes32 recoveryId
@@ -158,7 +158,7 @@ contract SocialRecoveryModuleTest is Test {
         Execution[] memory executions = new Execution[](1);
         executions[0].target = address(socialRecoveryModule);
         executions[0].value = 0;
-        executions[0].data = abi.encodeWithSignature("cancelReocvery(bytes32)", recoveryId);
+        executions[0].data = abi.encodeWithSignature("cancelRecovery(bytes32)", recoveryId);
 
         bytes memory callData = abi.encodeWithSignature("executeBatch((address,uint256,bytes)[])", executions);
 
@@ -183,7 +183,7 @@ contract SocialRecoveryModuleTest is Test {
         soulWalletInstence.entryPoint().handleOps(ops, payable(_owner));
         vm.warp(block.timestamp + delayTime);
         vm.expectRevert();
-        socialRecoveryModule.executeReocvery(wallet, newRawOwners, rawGuardian, guardianSignature);
+        socialRecoveryModule.executeRecovery(wallet, newOwners);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), false);
         assertEq(soulWallet.isOwner(_owner.toBytes32()), true);
     }
@@ -222,16 +222,16 @@ contract SocialRecoveryModuleTest is Test {
         console.log("guardianData2");
         console.logBytes(abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt));
 
-        socialRecoveryModule.scheduleReocvery(
+        socialRecoveryModule.scheduleRecovery(
             address(soulWallet),
-            abi.encode(newOwners),
+            newOwners,
             abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt),
             guardianSig
         );
         vm.expectRevert();
-        socialRecoveryModule.scheduleReocvery(
+        socialRecoveryModule.scheduleRecovery(
             address(soulWallet),
-            abi.encode(newOwners),
+            newOwners,
             abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt),
             guardianSig
         );
