@@ -28,7 +28,7 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
     uint256 internal constant _DONE_TIMESTAMP = uint256(1);
 
     bytes32 private constant _TYPE_HASH_SOCIAL_RECOVERY =
-        keccak256("SocialRecovery(address wallet,uint256 nonce, bytes32[] newOwner)");
+        keccak256("SocialRecovery(address wallet,uint256 nonce,bytes32[] newOwners)");
 
     function walletNonce(address wallet) public view override returns (uint256 _nonce) {
         return socialRecoveryInfo[wallet].nonce;
@@ -86,21 +86,6 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         socialRecoveryInfo[wallet].delayPeriod = newDelay;
         _increaseNonce(wallet);
         emit DelayPeriodSet(wallet, newDelay);
-    }
-
-    function cancelRecovery(bytes32 recoveryId) external {
-        address wallet = _msgSender();
-        if (!isOperationPending(wallet, recoveryId)) {
-            revert UNEXPECTED_OPERATION_STATE(
-                wallet,
-                recoveryId,
-                _encodeStateBitmap(OperationState.Waiting) | _encodeStateBitmap(OperationState.Ready)
-            );
-        }
-
-        delete socialRecoveryInfo[wallet].operationValidAt[recoveryId];
-        _increaseNonce(wallet);
-        emit RecoveryCancelled(wallet, recoveryId);
     }
 
     function cancelAllRecovery() external {

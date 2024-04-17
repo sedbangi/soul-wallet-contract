@@ -37,7 +37,6 @@ interface ISocialRecovery {
 
     function setGuardian(bytes32 newGuardianHash) external;
     function setDelayPeriod(uint256 newDelay) external;
-    function cancelRecovery(bytes32 recoveryId) external;
 
     enum OperationState {
         Unset,

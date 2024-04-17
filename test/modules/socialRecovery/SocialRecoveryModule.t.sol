@@ -30,7 +30,7 @@ contract SocialRecoveryModuleTest is Test {
 
     uint256 delayTime;
     bytes32 private constant _TYPE_HASH_SOCIAL_RECOVERY =
-        keccak256("SocialRecovery(address wallet,uint256 nonce, bytes32[] newOwner)");
+        keccak256("SocialRecovery(address wallet,uint256 nonce,bytes32[] newOwners)");
     bytes32 private constant _TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 private DOMAIN_SEPARATOR;
@@ -158,7 +158,7 @@ contract SocialRecoveryModuleTest is Test {
         Execution[] memory executions = new Execution[](1);
         executions[0].target = address(socialRecoveryModule);
         executions[0].value = 0;
-        executions[0].data = abi.encodeWithSignature("cancelRecovery(bytes32)", recoveryId);
+        executions[0].data = abi.encodeWithSignature("cancelAllRecovery()");
 
         bytes memory callData = abi.encodeWithSignature("executeBatch((address,uint256,bytes)[])", executions);
 
