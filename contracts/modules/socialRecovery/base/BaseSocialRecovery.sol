@@ -34,6 +34,21 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         return socialRecoveryInfo[wallet].nonce;
     }
 
+    /**
+     * @notice Returns the social recovery information for a given wallet.
+     */
+    function getSocialRecoveryInfo(address wallet)
+        public
+        view
+        returns (bytes32 guardianHash, uint256 nonce, uint256 delayPeriod)
+    {
+        return (
+            socialRecoveryInfo[wallet].guardianHash,
+            socialRecoveryInfo[wallet].nonce,
+            socialRecoveryInfo[wallet].delayPeriod
+        );
+    }
+
     function getOperationState(address wallet, bytes32 id) public view returns (OperationState) {
         uint256 timestamp = getOperationValidTime(wallet, id);
         if (timestamp == 0) {
