@@ -24,7 +24,7 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
     error HASH_ALREADY_REJECTED();
 
     mapping(address => SocialRecoveryInfo) socialRecoveryInfo;
-    mapping(bytes32 => uint256) approvedHashes;
+    mapping(bytes32 => uint256) public approvedHashes;
     uint256 internal constant _DONE_TIMESTAMP = uint256(1);
 
     bytes32 private constant _TYPE_HASH_SOCIAL_RECOVERY =
