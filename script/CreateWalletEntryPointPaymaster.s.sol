@@ -25,15 +25,8 @@ contract CreateWalletEntryPointPaymaster is Script {
     address walletSigner;
     uint256 walletSingerPrivateKey;
 
-    address newWalletSigner;
-    uint256 newWalletSingerPrivateKey;
-
     address guardianAddress;
     uint256 guardianPrivateKey;
-
-    address securityControlModuleAddress;
-
-    address keystoreModuleAddress;
 
     address defaultCallbackHandler;
     address soulWalletDefaultValidator;
@@ -60,24 +53,9 @@ contract CreateWalletEntryPointPaymaster is Script {
 
     function createWallet() private {
         bytes32 salt = bytes32(uint256(12));
-        bytes[] memory modules = new bytes[](2);
-        // security control module setup
-        securityControlModuleAddress = loadEnvContract("SecurityControlModule");
-        soulWalletDefaultValidator = loadEnvContract("SoulWalletDefaultValidator");
-        modules[0] = abi.encodePacked(securityControlModuleAddress, abi.encode(uint64(2 days)));
-        // keystore module setup
-        keystoreModuleAddress = loadEnvContract("KeyStoreModuleProxy");
-        address[] memory guardians = new address[](1);
-        guardians[0] = guardianAddress;
-        bytes memory rawGuardian = abi.encode(guardians, guardianThreshold, 0);
-        bytes32 initialGuardianHash = keccak256(rawGuardian);
+        bytes[] memory modules = new bytes[](0);
         bytes32[] memory owners = new bytes32[](1);
         owners[0] = walletSigner.toBytes32();
-
-        bytes memory keystoreModuleInitData =
-            abi.encode(keccak256(abi.encode(owners)), initialGuardianHash, initialGuardianSafePeriod);
-
-        modules[1] = abi.encodePacked(keystoreModuleAddress, keystoreModuleInitData);
 
         bytes[] memory hooks = new bytes[](0);
 

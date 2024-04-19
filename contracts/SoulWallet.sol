@@ -16,6 +16,13 @@ import {SoulWalletModuleManager} from "./abstract/SoulWalletModuleManager.sol";
 import {SoulWalletHookManager} from "./abstract/SoulWalletHookManager.sol";
 import {SoulWalletUpgradeManager} from "./abstract/SoulWalletUpgradeManager.sol";
 
+/**
+ * @title SoulWallet
+ * @dev This contract is the main entry point for the SoulWallet. It implements the IAccount and IERC1271 interfaces,
+ * and is compatible with the ERC-4337 standard.
+ * It inherits from multiple base contracts and managers to provide the core functionality of the wallet.
+ * This includes managing entry points, owners, modules, hooks, and upgrades, as well as handling ERC1271 signatures and providing a fallback function.
+ */
 contract SoulWallet is
     Initializable,
     IAccount,
@@ -37,6 +44,10 @@ contract SoulWallet is
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the SoulWallet contract
+     * @dev This function can only be called once. It sets the initial owners, default callback handler, modules, and hooks.
+     */
     function initialize(
         bytes32[] calldata owners,
         address defalutCallbackHandler,

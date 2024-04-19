@@ -10,7 +10,6 @@
 
 - Support [ERC-4337: Account Abstraction](https://eips.ethereum.org/EIPS/eip-4337)
 - [Modular design ](https://hackmd.io/3gbndH7tSl2J1EbNePJ3Yg)
-- Implement [asset / keystore](https://hackmd.io/-YY8jD7IQ7qfEZaDepXZsA?view) separation architecture
 - Upgradability: The smart contract for this wallet can be upgraded in a secure way to add new features or fix vulnerabilities in the future.
 - Stablecoin pay gas: Users can pay transaction gas fees with stablecoins such as USDC, USDT, DAI, etc.
 
@@ -42,34 +41,22 @@ All contracts are held within the `soul-wallet-contract/contracts` folder.
 ```
 contracts
 ├── abstract
+├── automation
 ├── dev
 │   └── tokens
 ├── factory
 ├── hooks
 │   └── 2fa
 ├── interfaces
-├── keystore
-│   ├── L1
-│   │   ├── base
-│   │   └── interfaces
-│   └── interfaces
 ├── libraries
 ├── modules
 │   ├── interfaces
-│   ├── keystore
-│   │   ├── arbitrum
+│   ├── socialRecovery
 │   │   ├── base
-│   │   ├── interfaces
-│   │   └── optimism
-│   ├── securityControlModule
-│   │   └── trustedContractManager
-│   │       ├── trustedHookManager
-│   │       ├── trustedModuleManager
-│   │       └── trustedValidatorManager
+│   │   └── interfaces
 │   └── upgrade
 ├── paymaster
 │   └── interfaces
-├── proxy
 └── validator
     └── libraries
 ```
@@ -114,7 +101,7 @@ contract NewModule is BaseModule {
 
 ### Hook
 
-o integrate a new hook, your contract should inherit `IHook` interface. This interface will define the standard structure and functionalities for your hooks.
+To integrate a new hook, your contract should inherit `IHook` interface. This interface will define the standard structure and functionalities for your hooks.
 
 ```solidity
 

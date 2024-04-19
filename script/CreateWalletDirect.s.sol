@@ -19,15 +19,8 @@ contract CreateWalletDirect is Script {
     address walletSigner;
     uint256 walletSingerPrivateKey;
 
-    address newWalletSigner;
-    uint256 newWalletSingerPrivateKey;
-
     address guardianAddress;
     uint256 guardianPrivateKey;
-
-    address securityControlModuleAddress;
-
-    address keystoreModuleAddress;
 
     address defaultCallbackHandler;
 
@@ -35,8 +28,6 @@ contract CreateWalletDirect is Script {
 
     address payable soulwalletAddress;
 
-    bytes32 private constant _TYPE_HASH_SET_KEY =
-        keccak256("SetKey(bytes32 keyStoreSlot,uint256 nonce,bytes32 newSigner)");
     bytes32 private constant _TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 

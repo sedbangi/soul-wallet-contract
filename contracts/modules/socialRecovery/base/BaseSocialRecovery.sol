@@ -7,6 +7,15 @@ import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+/**
+ * @title BaseSocialRecovery
+ * @dev This abstract contract provides the base implementation for the social recovery functionality.
+ * It implements the ISocialRecovery interface and extends the EIP712 contract.
+ * It allows a user to designate a list of guardians for their wallet and establish a recovery threshold.
+ * If a wallet is lost or compromised, the guardians can initiate a recovery process by signing a special EIP712 signature.
+ * However, this recovery process is subject to a user-defined time lock period, and can only execute the recovery after this period has passed.
+ * This mechanism ensures that the user's assets remain secure and recoverable, even in unforeseen circumstances.
+ */
 abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
     using ECDSA for bytes32;
 
@@ -61,26 +70,26 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
             return OperationState.Ready;
         }
     }
+
     /**
      * @dev Returns whether an operation is pending or not. Note that a "pending" operation may also be "ready".
      */
-
     function isOperationPending(address wallet, bytes32 id) public view returns (bool) {
         OperationState state = getOperationState(wallet, id);
         return state == OperationState.Waiting || state == OperationState.Ready;
     }
+
     /**
      * @dev Returns whether an operation is ready for execution. Note that a "ready" operation is also "pending".
      */
-
     function isOperationReady(address wallet, bytes32 id) public view returns (bool) {
         return getOperationState(wallet, id) == OperationState.Ready;
     }
+
     /**
      * @dev Returns whether an id corresponds to a registered operation. This
      * includes both Waiting, Ready, and Done operations.
      */
-
     function isOperationSet(address wallet, bytes32 id) public view returns (bool) {
         return getOperationState(wallet, id) != OperationState.Unset;
     }
@@ -89,6 +98,11 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         return socialRecoveryInfo[wallet].operationValidAt[id];
     }
 
+    /**
+     * @notice modify the guardian hash for a wallet
+     * @dev Emits a GuardianSet event
+     * @param newGuardianHash The new guardian hash
+     */
     function setGuardian(bytes32 newGuardianHash) external {
         address wallet = _msgSender();
         socialRecoveryInfo[wallet].guardianHash = newGuardianHash;
@@ -96,6 +110,11 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         emit GuardianSet(wallet, newGuardianHash);
     }
 
+    /**
+     * @notice Sets the recovery time lock period for a wallet
+     * @dev Emits a DelayPeriodSet event
+     * @param newDelay The new delay period
+     */
     function setDelayPeriod(uint256 newDelay) external {
         address wallet = _msgSender();
         socialRecoveryInfo[wallet].delayPeriod = newDelay;
@@ -108,10 +127,14 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         _increaseNonce(wallet);
         emit RecoveryCancelled(wallet, 0);
     }
-    /**
-     * @dev Considering that not all contract are EIP-1271 compatible
-     */
 
+    /**
+     * @notice Approves a hash for the sender
+     * the hash is the eip712 hash of the recover operation for guardian to sign
+     * @dev Considering that not all contracts are EIP-1271 compatible, this function could be called by the guardian if the guardian is a smart contract.
+     * It emits an ApproveHash event.
+     * @param hash The hash to be approved
+     */
     function approveHash(bytes32 hash) external {
         bytes32 key = _approveKey(msg.sender, hash);
         if (approvedHashes[key] == 1) {
@@ -120,6 +143,14 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         approvedHashes[key] = 1;
         emit ApproveHash(msg.sender, hash);
     }
+    /**
+     *
+     * @notice Rejects a hash for the sender
+     * the hash is the eip712 hash of the recover operation for guardian to sign
+     * @dev Considering that not all contracts are EIP-1271 compatible, this function could be called by the guardian if the guardian is a smart contract.
+     * It emits a RejectHash event.
+     * @param hash The hash to be rejected
+     */
 
     function rejectHash(bytes32 hash) external {
         bytes32 key = _approveKey(msg.sender, hash);
@@ -130,6 +161,14 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         emit RejectHash(msg.sender, hash);
     }
 
+    /**
+     * @notice Schedules a recovery operation for a wallet
+     * @param wallet The address of the wallet
+     * @param newOwners The new owners to be set for the wallet
+     * @param rawGuardian The raw guardian data
+     * @param guardianSignature The signature of the guardian
+     * @return recoveryId The ID of the recovery operation
+     */
     function scheduleRecovery(
         address wallet,
         bytes32[] calldata newOwners,
@@ -147,15 +186,19 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         emit RecoveryScheduled(wallet, recoveryId, scheduleTime);
     }
 
+    /**
+     * @notice Executes a recovery operation for a wallet
+     * @param wallet The address of the wallet
+     * @param newOwners The new owners to be set for the wallet
+     */
     function executeRecovery(address wallet, bytes32[] calldata newOwners) external override {
         bytes32 recoveryId = hashOperation(wallet, walletNonce(wallet), abi.encode(newOwners));
         if (!isOperationReady(wallet, recoveryId)) {
             revert UNEXPECTED_OPERATION_STATE(wallet, recoveryId, _encodeStateBitmap(OperationState.Ready));
         }
-        _recoveryOwner(wallet, newOwners);
-
         _setRecoveryDone(wallet, recoveryId);
         _increaseNonce(wallet);
+        _recoveryOwner(wallet, newOwners);
         emit RecoveryExecuted(wallet, recoveryId);
     }
 
@@ -168,6 +211,10 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         soulwallet.resetOwners(newOwners);
     }
 
+    /**
+     * @notice Verifies the guardian's signature
+     * @dev This function checks the signature type and verifies it accordingly. It supports EIP-1271 signatures for smart contract wallet, approved hashes, and EOA signatures.
+     */
     function _verifyGuardianSignature(
         address wallet,
         uint256 nonce,

@@ -23,22 +23,13 @@ contract CreateWalletEntryPoint is Script {
     address walletSigner;
     uint256 walletSingerPrivateKey;
 
-    address newWalletSigner;
-    uint256 newWalletSingerPrivateKey;
-
     address guardianAddress;
     uint256 guardianPrivateKey;
-
-    address securityControlModuleAddress;
-
-    address keystoreModuleAddress;
 
     address defaultCallbackHandler;
     address soulWalletDefaultValidator;
 
     SoulWalletFactory soulwalletFactory;
-
-    address payable soulwalletAddress;
 
     bytes emptyBytes;
     EntryPoint public entryPoint = EntryPoint(payable(0x0000000071727De22E5E9d8BAf0edAc6f37da032));
