@@ -14,6 +14,9 @@ contract SocialRecoveryModule is BaseModule, BaseSocialRecovery {
     bytes4 private constant _FUNC_RESET_OWNERS = bytes4(keccak256("resetOwners(bytes32[])"));
     mapping(address => bool) walletInited;
 
+    event SocialRecoveryInitialized(address indexed wallet, bytes32 guardianHash, uint256 delayPeriod);
+    event SocialRecoveryDeInitialized(address indexed wallet);
+
     constructor() EIP712("SocialRecovery", "1") {}
 
     /**
@@ -23,6 +26,7 @@ contract SocialRecoveryModule is BaseModule, BaseSocialRecovery {
         address _sender = sender();
         _clearWalletSocialRecoveryInfo(_sender);
         walletInited[_sender] = false;
+        emit SocialRecoveryDeInitialized(_sender);
     }
 
     /**
@@ -31,10 +35,11 @@ contract SocialRecoveryModule is BaseModule, BaseSocialRecovery {
      */
     function _init(bytes calldata _data) internal override {
         address _sender = sender();
-        (bytes32 guardianHash, uint256 delayPeroid) = abi.decode(_data, (bytes32, uint256));
+        (bytes32 guardianHash, uint256 delayPeriod) = abi.decode(_data, (bytes32, uint256));
         _setGuardianHash(_sender, guardianHash);
-        _setDelayPeriod(_sender, delayPeroid);
+        _setDelayPeriod(_sender, delayPeriod);
         walletInited[_sender] = true;
+        emit SocialRecoveryInitialized(_sender, guardianHash, delayPeriod);
     }
 
     /**
