@@ -55,7 +55,7 @@ library FCL_Elliptic_ZZ {
      * /* inversion mod n via a^(n-2), use of precompiled using little Fermat theorem
      */
     function FCL_nModInv(uint256 u) internal view returns (uint256 result) {
-        assembly {
+        assembly ("memory-safe") {
             let pointer := mload(0x40)
             // Define length of base, exponent and modulus. 0x20 == 32 bytes
             mstore(pointer, 0x20)
@@ -67,7 +67,7 @@ library FCL_Elliptic_ZZ {
             mstore(add(pointer, 0xa0), n)
 
             // Call the precompiled contract 0x05 = ModExp
-            if iszero(staticcall(not(0), 0x05, pointer, 0xc0, pointer, 0x20)) { revert(0, 0) }
+            if iszero(staticcall(gas(), 0x05, pointer, 0xc0, pointer, 0x20)) { revert(0, 0) }
             result := mload(pointer)
         }
     }
@@ -76,7 +76,7 @@ library FCL_Elliptic_ZZ {
      */
 
     function FCL_pModInv(uint256 u) internal view returns (uint256 result) {
-        assembly {
+        assembly ("memory-safe") {
             let pointer := mload(0x40)
             // Define length of base, exponent and modulus. 0x20 == 32 bytes
             mstore(pointer, 0x20)
@@ -87,8 +87,8 @@ library FCL_Elliptic_ZZ {
             mstore(add(pointer, 0x80), minus_2)
             mstore(add(pointer, 0xa0), p)
 
-            // Call the precompiled contract 0x05 = ModExp ̰
-            if iszero(staticcall(not(0), 0x05, pointer, 0xc0, pointer, 0x20)) { revert(0, 0) }
+            // Call the precompiled contract 0x05 = ModExp
+            if iszero(staticcall(gas(), 0x05, pointer, 0xc0, pointer, 0x20)) { revert(0, 0) }
             result := mload(pointer)
         }
     }
@@ -113,7 +113,6 @@ library FCL_Elliptic_ZZ {
      * @dev Sutherland2008 add a ZZ point with a normalized point and greedy formulae
      * warning: assume that P1(x1,y1)!=P2(x2,y2), true in multiplication loop with prime order (cofactor 1)
      */
-
     function ecZZ_AddN(uint256 x1, uint256 y1, uint256 zz1, uint256 zzz1, uint256 x2, uint256 y2)
         internal
         pure
@@ -124,7 +123,7 @@ library FCL_Elliptic_ZZ {
                 return (x2, y2, 1, 1);
             }
 
-            assembly {
+            assembly ("memory-safe") {
                 y1 := sub(p, y1)
                 y2 := addmod(mulmod(y2, zzz1, p), y1, p)
                 x2 := addmod(mulmod(x2, zz1, p), sub(p, x1), p)
@@ -153,7 +152,7 @@ library FCL_Elliptic_ZZ {
      * @dev Check if a point in affine coordinates is on the curve (reject Neutral that is indeed on the curve).
      */
     function ecAff_isOnCurve(uint256 x, uint256 y) internal pure returns (bool) {
-        if (0 == x || x == p || 0 == y || y == p) {
+        if (x >= p || y >= p || ((x == 0) && (y == 0))) {
             return false;
         }
         unchecked {
@@ -166,9 +165,8 @@ library FCL_Elliptic_ZZ {
     }
 
     /**
-     * @dev Add two elliptic curve points in affine coordinates.
+     * @dev Add two elliptic curve points in affine coordinates. Deal with P=Q
      */
-
     function ecAff_add(uint256 x0, uint256 y0, uint256 x1, uint256 y1) internal view returns (uint256, uint256) {
         uint256 zz0;
         uint256 zzz0;
@@ -204,6 +202,13 @@ library FCL_Elliptic_ZZ {
 
             (H0, H1) = ecAff_add(gx, gy, Q0, Q1); //will not work if Q=P, obvious forbidden private key
 
+            if (
+                (H0 == 0) && (H1 == 0) //handling Q=-G
+            ) {
+                scalar_u = addmod(scalar_u, n - scalar_v, n);
+                scalar_v = 0;
+                if (scalar_u == 0 && scalar_v == 0) return 0;
+            }
             assembly {
                 for { let T4 := add(shl(1, and(shr(index, scalar_v), 1)), and(shr(index, scalar_u), 1)) } eq(T4, 0) {
                     index := sub(index, 1)
@@ -287,13 +292,11 @@ library FCL_Elliptic_ZZ {
                                 T2 := mulmod(T1, T1, p) // V=U^2
                                 T3 := mulmod(X, T2, p) // S = X1*V
 
-                                let TT1 := mulmod(T1, T2, p) // W=UV
-                                y2 := addmod(X, zz, p)
-                                TT1 := addmod(X, sub(p, zz), p)
-                                y2 := mulmod(y2, TT1, p) //(X-ZZ)(X+ZZ)
-                                T4 := mulmod(3, y2, p) //M
+                                T1 := mulmod(T1, T2, p) // W=UV
+                                y2 := mulmod(addmod(X, zz, p), addmod(X, sub(p, zz), p), p) //(X-ZZ)(X+ZZ)
+                                T4 := mulmod(3, y2, p) //M=3*(X-ZZ)(X+ZZ)
 
-                                zzz := mulmod(TT1, zzz, p) //zzz3=W*zzz1
+                                zzz := mulmod(T1, zzz, p) //zzz3=W*zzz1
                                 zz := mulmod(T2, zz, p) //zz3=V*ZZ1, V free
 
                                 X := addmod(mulmod(T4, T4, p), mulmod(minus_2, T3, p), p) //X3=M^2-2S
@@ -330,7 +333,7 @@ library FCL_Elliptic_ZZ {
                 mstore(add(T, 0xa0), p)
 
                 // Call the precompiled contract 0x05 = ModExp
-                if iszero(staticcall(not(0), 0x05, T, 0xc0, T, 0x20)) { revert(0, 0) }
+                if iszero(staticcall(gas(), 0x05, T, 0xc0, T, 0x20)) { revert(0, 0) }
 
                 //Y:=mulmod(Y,zzz,p)//Y/zzz
                 //zz :=mulmod(zz, mload(T),p) //1/z
@@ -343,13 +346,14 @@ library FCL_Elliptic_ZZ {
     }
 
     /**
-     * @dev ECDSA verification, given , signature, and public key.
+     * @dev ECDSA verification, given , signature, and public key, no calldata version
      */
-    function ecdsa_verify(bytes32 message, uint256 r, uint256 s, uint256 Q0, uint256 Q1) internal view returns (bool) {
+    function ecdsa_verify(bytes32 message, uint256 r, uint256 s, uint256 Qx, uint256 Qy) internal view returns (bool) {
         if (r == 0 || r >= n || s == 0 || s >= n) {
             return false;
         }
-        if (!ecAff_isOnCurve(Q0, Q1)) {
+
+        if (!ecAff_isOnCurve(Qx, Qy)) {
             return false;
         }
 
@@ -359,12 +363,11 @@ library FCL_Elliptic_ZZ {
         uint256 scalar_v = mulmod(r, sInv, n);
         uint256 x1;
 
-        x1 = ecZZ_mulmuladd_S_asm(Q0, Q1, scalar_u, scalar_v);
+        x1 = ecZZ_mulmuladd_S_asm(Qx, Qy, scalar_u, scalar_v);
 
         assembly {
             x1 := addmod(x1, sub(n, r), n)
         }
-        //return true;
         return x1 == 0;
     }
 
@@ -410,7 +413,7 @@ library FCL_Elliptic_ZZ {
             // Call the precompiled ModExp (0x05) https://www.evm.codes/precompiled#0x05
             if iszero(
                 staticcall(
-                    not(0), // amount of gas to send
+                    gas(), // amount of gas to send
                     MODEXP_PRECOMPILE, // target
                     pointer, // argsOffset
                     0xc0, // argsSize (6 * 32 bytes)
@@ -428,12 +431,12 @@ library FCL_Elliptic_ZZ {
 
         return result;
     }
+
     /**
      * @dev Computation of uG+vQ using Strauss-Shamir's trick, G basepoint, Q public key
      *       Returns affine representation of point (normalized)
      *
      */
-
     function ecZZ_mulmuladd(
         uint256 Q0,
         uint256 Q1, //affine rep for input point Q
@@ -535,12 +538,10 @@ library FCL_Elliptic_ZZ {
                                 T3 := mulmod(X, T2, p) // S = X1*V
 
                                 T1 := mulmod(T1, T2, p) // W=UV
-                                y2 := addmod(X, zz, p) //X+ZZ
-                                let TT1 := addmod(X, sub(p, zz), p) //X-ZZ
-                                y2 := mulmod(y2, TT1, p) //(X-ZZ)(X+ZZ)
-                                T4 := mulmod(3, y2, p) //M
+                                y2 := mulmod(addmod(X, zz, p), addmod(X, sub(p, zz), p), p) //(X-ZZ)(X+ZZ)
+                                T4 := mulmod(3, y2, p) //M=3*(X-ZZ)(X+ZZ)
 
-                                zzz := mulmod(TT1, zzz, p) //zzz3=W*zzz1
+                                zzz := mulmod(T1, zzz, p) //zzz3=W*zzz1
                                 zz := mulmod(T2, zz, p) //zz3=V*ZZ1, V free
 
                                 X := addmod(mulmod(T4, T4, p), mulmod(minus_2, T3, p), p) //X3=M^2-2S
@@ -577,7 +578,7 @@ library FCL_Elliptic_ZZ {
                 mstore(add(T, 0xa0), p)
 
                 // Call the precompiled contract 0x05 = ModExp
-                if iszero(staticcall(not(0), 0x05, T, 0xc0, T, 0x20)) { revert(0, 0) }
+                if iszero(staticcall(gas(), 0x05, T, 0xc0, T, 0x20)) { revert(0, 0) }
 
                 Y := mulmod(Y, mload(T), p) //Y/zzz
                 zz := mulmod(zz, mload(T), p) //1/z
