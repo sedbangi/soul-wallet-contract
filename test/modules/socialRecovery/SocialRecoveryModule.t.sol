@@ -76,6 +76,30 @@ contract SocialRecoveryModuleTest is Test {
         assertEq(soulWallet.isInstalledModule(address(socialRecoveryModule)), true);
     }
 
+    function deployGuardianDataZeroWallet() private {
+        bytes[] memory modules = new bytes[](1);
+        bytes[] memory hooks = new bytes[](0);
+        bytes32[] memory owners = new bytes32[](1);
+        owners[0] = address(_owner).toBytes32();
+
+        address[] memory guardians = new address[](0);
+        guarianData = GuardianData(guardians, 0, 0);
+
+        bytes32 guardianHash = keccak256(abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt));
+        console.log("deployGuardianDataZeroWallet guardianHash");
+        console.logBytes32(guardianHash);
+        delayTime = 1 days;
+
+        bytes memory socialRecoveryInitData = abi.encode(guardianHash, delayTime);
+        modules[0] = abi.encodePacked(socialRecoveryModule, socialRecoveryInitData);
+        bytes32 salt = bytes32(0);
+        soulWalletInstence = new SoulWalletInstence(address(0), owners, modules, hooks, salt);
+        soulWallet = soulWalletInstence.soulWallet();
+        assertEq(soulWallet.isOwner(_owner.toBytes32()), true);
+        assertEq(soulWallet.isOwner(_newOwner.toBytes32()), false);
+        assertEq(soulWallet.isInstalledModule(address(socialRecoveryModule)), true);
+    }
+
     function test_deployWalletWithSocialRecoveryModule() public {
         deployWallet();
     }
@@ -228,6 +252,21 @@ contract SocialRecoveryModuleTest is Test {
             abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt),
             guardianSig
         );
+        vm.expectRevert();
+        socialRecoveryModule.scheduleRecovery(
+            address(soulWallet),
+            newOwners,
+            abi.encode(guarianData.guardians, guarianData.threshold, guarianData.salt),
+            guardianSig
+        );
+    }
+
+    function test_guardianDataZeroWallet() public {
+        deployGuardianDataZeroWallet();
+        socialRecoveryModule.walletNonce(address(soulWallet));
+        bytes32[] memory newOwners = new bytes32[](1);
+        newOwners[0] = address(_newOwner).toBytes32();
+        bytes memory guardianSig = abi.encodePacked("1");
         vm.expectRevert();
         socialRecoveryModule.scheduleRecovery(
             address(soulWallet),

@@ -30,6 +30,8 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
     error UNEXPECTED_OPERATION_STATE(address wallet, bytes32 recoveryId, bytes32 expectedStates);
     error HASH_ALREADY_APPROVED();
     error GUARDIAN_SIGNATURE_INVALID();
+    error GUARDIAN_THRESHOLD_INVALID();
+    error GUARDIAN_SIG_LENGTH_INVALID();
     error HASH_ALREADY_REJECTED();
 
     mapping(address => SocialRecoveryInfo) socialRecoveryInfo;
@@ -227,6 +229,13 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
         );
         GuardianData memory guardianData = _parseGuardianData(rawGuardian);
         uint256 guardiansLen = guardianData.guardians.length;
+
+        if (guardianData.threshold == 0) {
+            revert GUARDIAN_THRESHOLD_INVALID();
+        }
+        if (guardiansLen == 0) {
+            revert GUARDIAN_SIG_LENGTH_INVALID();
+        }
 
         // for extreme cases
         if (guardianData.threshold > guardiansLen) guardianData.threshold = guardiansLen;
