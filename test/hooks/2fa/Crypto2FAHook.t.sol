@@ -101,4 +101,10 @@ contract Crypto2FAHookTest is Test, UserOpHelper {
         ops[0] = userOperation;
         soulWalletInstence.entryPoint().handleOps(ops, payable(walletOwner));
     }
+
+    function test_applyChange2faWithoutInitiateChange2FA() public {
+        vm.startPrank(address(soulWallet));
+        vm.expectRevert("No pending change");
+        crypto2FAHook.applyChange2FA();
+    }
 }

@@ -63,7 +63,8 @@ contract Crypto2FAHook is IHook {
 
     function applyChange2FA() external {
         User2FA storage _user2fa = user2FA[msg.sender];
-        require(block.timestamp >= _user2fa.effectiveTime, "Time lock not expired");
+        require(_user2fa.pending2FAAddr != address(0), "No pending change");
+        require(_user2fa.effectiveTime > 0 && block.timestamp >= _user2fa.effectiveTime, "Time lock not expired");
         _user2fa.wallet2FAAddr = _user2fa.pending2FAAddr;
         _user2fa.pending2FAAddr = address(0);
         _user2fa.effectiveTime = 0;
