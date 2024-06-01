@@ -309,7 +309,7 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
                     // read 's' as bytes4
                     let sigLen := shr(224, calldataload(add(signatures.offset, 1)))
 
-                    cursorEnd := add(5, sigLen) // see Note line 223
+                    cursorEnd := add(5, sigLen) // see Note line 282
                     cursor := add(cursor, cursorEnd)
                 }
 
@@ -333,9 +333,7 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
              */
                 bytes32 key = _approveKey(guardianData.guardians[i], digest);
                 require(approvedHashes[key] == 1, "hash not approved");
-                unchecked {
-                    cursor += 1; // see Note line 223
-                }
+                cursor += 1; // see Note line 282
             } else if (v == 2) {
                 /*
                 v = 2
@@ -347,7 +345,7 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
                     // read 's' as bytes4
                     let skipTimes := shr(224, calldataload(add(signatures.offset, 1)))
 
-                    i := add(i, skipTimes) // see Note line 223
+                    i := add(i, skipTimes) // see Note line 282
                     skipCount := add(skipCount, add(skipTimes, 1))
                     cursor := add(cursor, 5)
                 }
@@ -362,13 +360,11 @@ abstract contract BaseSocialRecovery is ISocialRecovery, EIP712 {
                     s := calldataload(add(signatures.offset, 1))
                     r := calldataload(add(signatures.offset, 33))
 
-                    cursor := add(cursor, 65) // see Note line 223
+                    cursor := add(cursor, 65) // see Note line 282
                 }
                 require(guardianData.guardians[i] == ECDSA.recover(digest, v, r, s), "guardian signature invalid");
             }
-            unchecked {
-                i++; // see Note line 223
-            }
+            i++; // see Note line 282
         }
         if (guardiansLen - skipCount < guardianData.threshold) {
             revert GUARDIAN_SIGNATURE_INVALID();
