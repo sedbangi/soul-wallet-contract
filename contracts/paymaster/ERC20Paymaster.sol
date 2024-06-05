@@ -207,7 +207,7 @@ contract ERC20Paymaster is BasePaymaster {
             (actualGasCost + costOfPost) * supportedToken[token].priceMarkup * cachedPrice / (1e18 * PRICE_DENOMINATOR);
         if (sponsorWalletCreation) {
             // if sponsor during wallet creatation, charge the acutal amount
-            IERC20Metadata(token).safeTransferFrom(sender, address(this), tokenRequiredPreFund);
+            IERC20Metadata(token).safeTransferFrom(sender, address(this), tokenRequiredFund);
         } else if (sponsorWalletCreation == false && tokenRequiredPreFund > tokenRequiredFund) {
             // refund unsed precharge token
             IERC20Metadata(token).safeTransfer(sender, tokenRequiredPreFund - tokenRequiredFund);
