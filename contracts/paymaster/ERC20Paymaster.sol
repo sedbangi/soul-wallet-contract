@@ -136,7 +136,7 @@ contract ERC20Paymaster is BasePaymaster {
             sponsorWalletCreation = false;
         }
 
-        return (abi.encode(sender, token, costOfPost, cachedPrice, tokenRequiredPreFund, sponsorWalletCreation), 0);
+        return (abi.encode(sender, token, costOfPost, tokenRequiredPreFund, sponsorWalletCreation), 0);
     }
 
     /*
@@ -199,12 +199,17 @@ contract ERC20Paymaster is BasePaymaster {
             address sender,
             address payable token,
             uint256 costOfPost,
-            uint256 cachedPrice,
             uint256 tokenRequiredPreFund,
             bool sponsorWalletCreation
-        ) = abi.decode(context, (address, address, uint256, uint256, uint256, bool));
+        ) = abi.decode(context, (address, address, uint256, uint256, bool));
+        // update oracle
+        uint192 lasestTokenPrice = fetchPrice(supportedToken[token].tokenOracle);
+        uint192 nativeAssetPrice = fetchPrice(nativeAssetOracle);
+        uint192 price = nativeAssetPrice * uint192(supportedToken[token].tokenDecimals) / lasestTokenPrice;
+        supportedToken[token].previousPrice = price;
+
         uint256 tokenRequiredFund =
-            (actualGasCost + costOfPost) * supportedToken[token].priceMarkup * cachedPrice / (1e18 * PRICE_DENOMINATOR);
+            (actualGasCost + costOfPost) * supportedToken[token].priceMarkup * price / (1e18 * PRICE_DENOMINATOR);
         if (sponsorWalletCreation) {
             // if sponsor during wallet creatation, charge the acutal amount
             IERC20Metadata(token).safeTransferFrom(sender, address(this), tokenRequiredFund);
@@ -212,11 +217,7 @@ contract ERC20Paymaster is BasePaymaster {
             // refund unsed precharge token
             IERC20Metadata(token).safeTransfer(sender, tokenRequiredPreFund - tokenRequiredFund);
         }
-        // update oracle
-        uint192 lasestTokenPrice = fetchPrice(supportedToken[token].tokenOracle);
-        uint192 nativeAssetPrice = fetchPrice(nativeAssetOracle);
-        supportedToken[token].previousPrice =
-            nativeAssetPrice * uint192(supportedToken[token].tokenDecimals) / lasestTokenPrice;
+
         emit UserOperationSponsored(sender, token, tokenRequiredFund, actualGasCost);
     }
 
