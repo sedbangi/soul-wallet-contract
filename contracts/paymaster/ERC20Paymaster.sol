@@ -161,19 +161,19 @@ contract ERC20Paymaster is BasePaymaster {
         executions = abi.decode(userOp.callData[4:], (Execution[]));
 
         require(isSupportToken(token), "Paymaster: token not support");
-        bool checkAllowance = false;
-        for (uint256 i = 0; i < executions.length; i++) {
-            address destAddr = executions[i].target;
-            // check it contains approve operation, 0x095ea7b3 approve(address,uint256)
-            if (destAddr == token && bytes4(executions[i].data) == bytes4(0x095ea7b3)) {
-                (address spender, uint256 amount) = _decodeApprove(executions[i].data);
-                require(spender == address(this), "Paymaster: invalid spender");
-                require(amount >= tokenRequiredPreFund, "Paymaster: not enough approve");
-                checkAllowance = true;
-                break;
-            }
-        }
-        require(checkAllowance, "no approve found");
+        // when the wallet is created, using this erc20paymaster, the first and the only operation should be approve operation
+        // check it contains approve operation, 0x095ea7b3 approve(address,uint256)
+        require(
+            executions.length == 1 && bytes4(executions[0].data) == bytes4(0x095ea7b3)
+                && isSupportToken(executions[0].target),
+            "invalid operation"
+        );
+
+        (address spender, uint256 amount) = _decodeApprove(executions[0].data);
+        require(spender == address(this), "Paymaster: invalid spender");
+        require(amount >= tokenRequiredPreFund, "Paymaster: not enough approve");
+        uint256 tokenBalance = IERC20Metadata(token).balanceOf(userOp.getSender());
+        require(tokenBalance >= tokenRequiredPreFund, "Paymaster: not enough balance");
         // callGasLimit
         uint256 callGasLimit = executions.length * _SAFE_APPROVE_GAS_COST;
         require(userOp.unpackCallGasLimit() >= callGasLimit, "Paymaster: gas too low for postOp");
