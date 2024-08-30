@@ -22,6 +22,10 @@ The Program is limited to bugs that fall under the following categories:
 - Temporary freezing of funds
 - Temporary freezing of NFTs
 
+**Temporary Exclusion**
+
+- We are aware of issues related to `FCL_elliptic.sol` and are currently working on modifications. Until these modifications are completed, we will not be accepting bug submissions related to `FCL_elliptic.sol`. Thank you for your understanding.
+
 The following items are not covered under this Program:
 
 - Any contract found under the `contracts/test` directory.

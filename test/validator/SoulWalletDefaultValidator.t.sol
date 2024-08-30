@@ -8,6 +8,7 @@ import "@source/libraries/TypeConversion.sol";
 import {ISoulWallet} from "@source/interfaces/ISoulWallet.sol";
 import "@source/abstract/DefaultCallbackHandler.sol";
 import {SoulWalletInstence} from "../soulwallet/base/SoulWalletInstence.sol";
+import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 
 contract ValidatorSigDecoderTest is Test {
     bytes4 internal constant MAGICVALUE = 0x1626ba7e;
@@ -15,14 +16,14 @@ contract ValidatorSigDecoderTest is Test {
     bytes4 internal constant INVALID_ID = 0xffffffff;
     bytes4 internal constant INVALID_TIME_RANGE = 0xfffffffe;
     SoulWalletDefaultValidator soulWalletDefaultValidator;
+
     using TypeConversion for address;
     using MessageHashUtils for bytes32;
 
-    address public owner; 
+    address public owner;
     uint256 public ownerKey;
     SoulWalletInstence public soulWalletInstence;
     ISoulWallet soulWallet;
-
 
     function setUp() public {
         (owner, ownerKey) = makeAddrAndKey("owner");
@@ -34,19 +35,17 @@ contract ValidatorSigDecoderTest is Test {
         bytes32[] memory owners = new bytes32[](2);
         owners[0] = (owner).toBytes32();
         //   bytes32 expected;
-        uint256 Qx = uint256(0xe89e8b4be943fadb4dc599fe2e8af87a79b438adde328a3b72d43324506cd5b6);
-        uint256 Qy = uint256(0x4fbfe4a2f9934783c3b1af712ee87abc08f576e79346efc3b8355d931bd7b976);
+        uint256 Qx = uint256(0xEF1725ABD32B320321B811941E94FF32CD326B83A25D5BC19459FAF2EC98B41C);
+        uint256 Qy = uint256(0xEC9087BA68464494F1BE48478E6D08FA0AFC45405E23B9B17BD9F8F76A6F51F4);
         bytes32 passkeyOwner = keccak256(abi.encodePacked(Qx, Qy));
         console.log("passkeyOwner");
         console.logBytes32(passkeyOwner);
         owners[1] = passkeyOwner;
 
-        soulWalletInstence =
-            new SoulWalletInstence(address(defaultCallbackHandler), owners,  modules, hooks,  salt);
+        soulWalletInstence = new SoulWalletInstence(address(defaultCallbackHandler), owners, modules, hooks, salt);
         soulWallet = soulWalletInstence.soulWallet();
         assertEq(soulWallet.isOwner(owner.toBytes32()), true);
         assertEq(soulWallet.isOwner(passkeyOwner), true);
-        
     }
 
     /*
@@ -87,8 +86,7 @@ contract ValidatorSigDecoderTest is Test {
         uint8 signType = 0;
         bytes memory validatorSignature = abi.encodePacked(signType, sig);
         vm.startPrank(address(soulWallet));
-        bytes4 validateResult =
-            soulWalletDefaultValidator.validateSignature(owner, hash, validatorSignature);
+        bytes4 validateResult = soulWalletDefaultValidator.validateSignature(owner, hash, validatorSignature);
         assertEq(validateResult, MAGICVALUE);
     }
     /*
@@ -110,17 +108,15 @@ contract ValidatorSigDecoderTest is Test {
         bytes32 hash = keccak256(abi.encodePacked("hello world"));
         uint48 validUntil = 0;
         uint48 validAfter = 1695199125;
-        vm.warp(validAfter + 60); 
+        vm.warp(validAfter + 60);
         uint256 validationData = (uint256(validUntil) << 160) | (uint256(validAfter) << (160 + 48));
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(ownerKey, keccak256(abi.encodePacked(hash, validationData)));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerKey, keccak256(abi.encodePacked(hash, validationData)));
         bytes memory sig = abi.encodePacked(r, s, v);
         assertEq(sig.length, 65);
         uint8 signType = 1;
         bytes memory validatorSignature = abi.encodePacked(signType, validationData, sig);
         vm.startPrank(address(soulWallet));
-        bytes4 validateResult =
-            soulWalletDefaultValidator.validateSignature(owner, hash, validatorSignature);
+        bytes4 validateResult = soulWalletDefaultValidator.validateSignature(owner, hash, validatorSignature);
         assertEq(validateResult, MAGICVALUE);
     }
     /*
@@ -142,25 +138,29 @@ contract ValidatorSigDecoderTest is Test {
     */
 
     function test_SignValidatorTypeC() public {
-        bytes32 expected;
-        {
-            uint256 Qx = uint256(0xe89e8b4be943fadb4dc599fe2e8af87a79b438adde328a3b72d43324506cd5b6);
-            uint256 Qy = uint256(0x4fbfe4a2f9934783c3b1af712ee87abc08f576e79346efc3b8355d931bd7b976);
-            expected = keccak256(abi.encodePacked(Qx, Qy));
-        }
         bytes memory sig = hex"00" // algorithmType
-            hex"2ae3ddfe4cc414dc0fad7ff3a5c960d1cee1211722d3099ade76e5ac1826731a" // r
-            hex"87e5d654f357e4cd6cb52512b2da4d91eae0ae48e9d892ce532b9352f63a55d6" // s
-            hex"1c0025002449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3" // 0x1c00250024: v=0x1c, authenticatorDataLength=0x25, clientDataPrefixLength=0x24
-            hex"ba831d976305000000007b2274797065223a22776562617574686e2e67657422"
-            hex"2c226368616c6c656e6765223a22222c226f726967696e223a22687474703a2f"
-            hex"2f6c6f63616c686f73743a35353030222c2263726f73734f726967696e223a66" hex"616c73657d";
-        bytes32 userOpHash = 0x83714056da6e6910b51595330c2c2cdfbf718f2deff5bdd84b95df7a7f36f6dd;
+            hex"12ade0dca831d36d3645590fac16d8270927b336e563af886da93bfdf14fa184" // r
+            hex"74bca343c4bc743ba6dd68e5f2c5e2ca1014112b9e0d43cfd4e28d8e7d646661" // s
+            hex"EF1725ABD32B320321B811941E94FF32CD326B83A25D5BC19459FAF2EC98B41C" // x
+            hex"EC9087BA68464494F1BE48478E6D08FA0AFC45405E23B9B17BD9F8F76A6F51F4" // y
+            hex"00250000" // 0x00250000: authenticatorDataLength=0x25
+            hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97630500000000222c226f726967696e223a2268747470733a2f2f776562617574686e2d6d6f636b2e736f756c77616c6c65742e696f222c2263726f73734f726967696e223a66616c73657d";
+        bytes32 userOpHash = 0x355f84376b4cb4bc536c8e57f6607d0acac4db2a287734fd13a8eaee2edeaf75;
 
         uint8 signType = 0x2;
         bytes memory validatorSignature = abi.encodePacked(signType, sig);
         vm.startPrank(address(soulWallet));
-        bytes4 result = soulWalletDefaultValidator.validateSignature(msg.sender , userOpHash, validatorSignature);
+        bytes4 result = soulWalletDefaultValidator.validateSignature(msg.sender, userOpHash, validatorSignature);
         assertEq(result, MAGICVALUE);
+    }
+
+    function test_p256() public {
+        bytes32 hash = 0x5f7bc87cdaf014addc19068b92d9c8f7b30ac415718163906171fc8eea9c80d6;
+        bytes32 r = 0x12ade0dca831d36d3645590fac16d8270927b336e563af886da93bfdf14fa184;
+        bytes32 s = 0x74bca343c4bc743ba6dd68e5f2c5e2ca1014112b9e0d43cfd4e28d8e7d646661;
+        bytes32 x = 0xEF1725ABD32B320321B811941E94FF32CD326B83A25D5BC19459FAF2EC98B41C;
+        bytes32 y = 0xEC9087BA68464494F1BE48478E6D08FA0AFC45405E23B9B17BD9F8F76A6F51F4;
+        bool result = P256.verify(hash, r, s, x, y);
+        assertEq(result, true);
     }
 }
