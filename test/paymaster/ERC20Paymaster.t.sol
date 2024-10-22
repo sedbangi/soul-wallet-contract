@@ -76,7 +76,7 @@ contract ERC20PaymasterTest is Test, UserOpHelper {
         vm.warp(1685300000);
     }
 
-    function testSetup() external {
+    function testSetup() external view {
         assertEq(address(paymaster.entryPoint()), address(entryPoint));
         assertEq(paymaster.isSupportToken(address(token)), true);
         assertEq(address(paymaster.owner()), paymasterOwner);
@@ -139,6 +139,7 @@ contract ERC20PaymasterTest is Test, UserOpHelper {
         public
         returns (PackedUserOperation memory op, uint256 prefund)
     {
+        prefund = 0;
         op = UserOperationHelper.newUserOp({
             sender: address(_sender),
             nonce: entryPoint.getNonce(address(_sender), 0),

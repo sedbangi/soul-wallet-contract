@@ -154,7 +154,7 @@ contract ValidatorSigDecoderTest is Test {
         assertEq(result, MAGICVALUE);
     }
 
-    function test_p256() public {
+    function test_p256() public view {
         bytes32 hash = 0x5f7bc87cdaf014addc19068b92d9c8f7b30ac415718163906171fc8eea9c80d6;
         bytes32 r = 0x12ade0dca831d36d3645590fac16d8270927b336e563af886da93bfdf14fa184;
         bytes32 s = 0x74bca343c4bc743ba6dd68e5f2c5e2ca1014112b9e0d43cfd4e28d8e7d646661;

@@ -154,6 +154,8 @@ contract SocialRecoveryModuleTest is Test {
     function test_executeSocialRecovery() public {
         (address wallet, bytes32[] memory newOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
             scheduleSocialReocery();
+        (rawGuardian);
+        (guardianSignature);
         vm.warp(block.timestamp + delayTime);
         socialRecoveryModule.executeRecovery(wallet, newOwners);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), true);
@@ -163,6 +165,8 @@ contract SocialRecoveryModuleTest is Test {
     function test_executeSocialRecoveryNotInReadyState() public {
         (address wallet, bytes32[] memory newOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
             scheduleSocialReocery();
+        (rawGuardian);
+        (guardianSignature);
         vm.expectRevert();
         socialRecoveryModule.executeRecovery(wallet, newOwners);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), false);
@@ -177,6 +181,9 @@ contract SocialRecoveryModuleTest is Test {
             bytes memory guardianSignature,
             bytes32 recoveryId
         ) = scheduleSocialReocery();
+        (rawGuardian);
+        (guardianSignature);
+        (recoveryId);
         soulWalletInstence.entryPoint().depositTo{value: 5 ether}(address(soulWallet));
         vm.startBroadcast(_ownerPrivateKey);
         Execution[] memory executions = new Execution[](1);

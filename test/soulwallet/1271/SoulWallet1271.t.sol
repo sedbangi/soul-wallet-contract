@@ -45,13 +45,13 @@ contract DeployDirectTest is Test {
         DefaultCallbackHandler defaultCallbackHandler = new DefaultCallbackHandler();
         bytes32[] memory owners = new bytes32[](1);
         owners[0] = walletOwner.toBytes32();
-        soulWalletInstence = new SoulWalletInstence(address(defaultCallbackHandler), owners,  modules, hooks,  salt);
+        soulWalletInstence = new SoulWalletInstence(address(defaultCallbackHandler), owners, modules, hooks, salt);
         soulWallet = soulWalletInstence.soulWallet();
     }
 
     function signMsg(uint256 privateKey, bytes32 _hash, address validatorAddress)
         private
-        view
+        pure
         returns (bytes memory signature)
     {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, _hash);
@@ -61,7 +61,7 @@ contract DeployDirectTest is Test {
         return abi.encodePacked(address(validatorAddress), signatureLength, signType, signatureData);
     }
 
-    function testVerify1271Signature() public {
+    function testVerify1271Signature() public view {
         bytes32 hash = keccak256("hello world");
         bytes32 rawHash = encodeRawHash(hash, address(soulWallet));
         bytes memory signature =

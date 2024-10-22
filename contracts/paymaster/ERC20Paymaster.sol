@@ -192,6 +192,7 @@ contract ERC20Paymaster is BasePaymaster {
         internal
         override
     {
+        (actualUserOpFeePerGas);
         if (mode == PostOpMode.postOpReverted) {
             return; // Do nothing here to not revert the whole bundle and harm reputation
         }

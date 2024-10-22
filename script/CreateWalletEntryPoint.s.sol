@@ -137,7 +137,7 @@ contract CreateWalletEntryPoint is Script {
         entryPoint.handleOps(ops, payable(walletSigner));
     }
 
-    function logUserOp(PackedUserOperation memory op) private view {
+    function logUserOp(PackedUserOperation memory op) private pure {
         console.log("sender: ", op.sender);
         console.log("nonce: ", op.nonce);
         console.log("initCode: ");
