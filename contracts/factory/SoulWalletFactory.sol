@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.20;
 
@@ -7,7 +6,7 @@ pragma solidity ^0.8.20;
 /* solhint-disable reason-string */
 
 import "../SoulWallet.sol";
-import "@openzeppelin/contracts/utils/Create2.sol";
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -18,7 +17,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @dev This contract is called by the entrypoint which uses the "initCode" to create and return the sender's wallet address
  */
 contract SoulWalletFactory is Ownable {
-    address immutable public _WALLETIMPL;
+    address public immutable _WALLETIMPL;
     IEntryPoint public immutable entryPoint;
     string public constant VERSION = "0.0.1";
 
@@ -37,7 +36,6 @@ contract SoulWalletFactory is Ownable {
         entryPoint = IEntryPoint(_entryPoint);
     }
 
-
     function _calcSalt(bytes memory _initializer, bytes32 _salt) private pure returns (bytes32 salt) {
         return keccak256(abi.encodePacked(keccak256(_initializer), _salt));
     }
@@ -51,7 +49,7 @@ contract SoulWalletFactory is Ownable {
     function createWallet(bytes memory _initializer, bytes32 _salt) external returns (address proxy) {
         // factory expected to return the wallet address even if the wallet has already been created.
         address addr = getWalletAddress(_initializer, _salt);
-        uint codeSize = addr.code.length;
+        uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
             return addr;
         }
@@ -81,6 +79,7 @@ contract SoulWalletFactory is Ownable {
     /**
      * @notice  using solay ERC1967 https://github.com/Vectorized/solady/blob/5eff720c27746987dc95e5e2b720615d3d96f7ee/src/utils/LibClone.sol#L774C18-L774C18
      */
+
     function _proxyCode(address implementation) private pure returns (bytes memory deploymentData) {
         deploymentData = abi.encodePacked(
             hex"603d3d8160223d3973",

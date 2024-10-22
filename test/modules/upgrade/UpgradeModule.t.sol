@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../../soulwallet/base/SoulWalletInstence.sol";
+import {SoulWalletDefaultValidator} from "@source/validator/SoulWalletDefaultValidator.sol";
 import "@source/modules/upgrade/UpgradeModule.sol";
 import "@source/dev/NewImplementation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -32,7 +33,8 @@ contract UpgradeTest is Test {
         owners[0] = walletOwner.toBytes32();
 
         bytes32 salt = bytes32(0);
-        soulWalletInstence = new SoulWalletInstence(address(0), owners,  modules, hooks,  salt);
+        soulWalletInstence =
+            new SoulWalletInstence(address(0), address(new SoulWalletDefaultValidator()), owners, modules, hooks, salt);
         soulWallet = soulWalletInstence.soulWallet();
 
         (address[] memory _modules, bytes4[][] memory _selectors) = soulWallet.listModule();

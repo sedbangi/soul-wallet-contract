@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import "@source/modules/socialRecovery/SocialRecoveryModule.sol";
 import "../../soulwallet/base/SoulWalletInstence.sol";
+import {SoulWalletDefaultValidator} from "@source/validator/SoulWalletDefaultValidator.sol";
 import {UserOperationHelper} from "@soulwallet-core/test/dev/userOperationHelper.sol";
 import {Execution} from "@soulwallet-core/contracts/interface/IStandardExecutor.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -19,6 +20,7 @@ contract SocialRecoveryModuleTest is Test {
 
     SocialRecoveryModule socialRecoveryModule;
     SoulWalletInstence public soulWalletInstence;
+    SoulWalletDefaultValidator public soulWalletDefaultValidator;
     ISoulWallet soulWallet;
     GuardianData guarianData;
     address _owner;
@@ -49,6 +51,7 @@ contract SocialRecoveryModuleTest is Test {
                 address(socialRecoveryModule)
             )
         );
+        soulWalletDefaultValidator = new SoulWalletDefaultValidator();
     }
 
     function deployWallet() private {
@@ -69,7 +72,8 @@ contract SocialRecoveryModuleTest is Test {
         bytes memory socialRecoveryInitData = abi.encode(guardianHash, delayTime);
         modules[0] = abi.encodePacked(socialRecoveryModule, socialRecoveryInitData);
         bytes32 salt = bytes32(0);
-        soulWalletInstence = new SoulWalletInstence(address(0), owners, modules, hooks, salt);
+        soulWalletInstence =
+            new SoulWalletInstence(address(0), address(soulWalletDefaultValidator), owners, modules, hooks, salt);
         soulWallet = soulWalletInstence.soulWallet();
         assertEq(soulWallet.isOwner(_owner.toBytes32()), true);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), false);
@@ -93,7 +97,8 @@ contract SocialRecoveryModuleTest is Test {
         bytes memory socialRecoveryInitData = abi.encode(guardianHash, delayTime);
         modules[0] = abi.encodePacked(socialRecoveryModule, socialRecoveryInitData);
         bytes32 salt = bytes32(0);
-        soulWalletInstence = new SoulWalletInstence(address(0), owners, modules, hooks, salt);
+        soulWalletInstence =
+            new SoulWalletInstence(address(0), address(soulWalletDefaultValidator), owners, modules, hooks, salt);
         soulWallet = soulWalletInstence.soulWallet();
         assertEq(soulWallet.isOwner(_owner.toBytes32()), true);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), false);
@@ -154,6 +159,8 @@ contract SocialRecoveryModuleTest is Test {
     function test_executeSocialRecovery() public {
         (address wallet, bytes32[] memory newOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
             scheduleSocialReocery();
+        (rawGuardian);
+        (guardianSignature);
         vm.warp(block.timestamp + delayTime);
         socialRecoveryModule.executeRecovery(wallet, newOwners);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), true);
@@ -163,6 +170,8 @@ contract SocialRecoveryModuleTest is Test {
     function test_executeSocialRecoveryNotInReadyState() public {
         (address wallet, bytes32[] memory newOwners, bytes memory rawGuardian, bytes memory guardianSignature,) =
             scheduleSocialReocery();
+        (rawGuardian);
+        (guardianSignature);
         vm.expectRevert();
         socialRecoveryModule.executeRecovery(wallet, newOwners);
         assertEq(soulWallet.isOwner(_newOwner.toBytes32()), false);
@@ -177,6 +186,9 @@ contract SocialRecoveryModuleTest is Test {
             bytes memory guardianSignature,
             bytes32 recoveryId
         ) = scheduleSocialReocery();
+        (rawGuardian);
+        (guardianSignature);
+        (recoveryId);
         soulWalletInstence.entryPoint().depositTo{value: 5 ether}(address(soulWallet));
         vm.startBroadcast(_ownerPrivateKey);
         Execution[] memory executions = new Execution[](1);
@@ -198,8 +210,7 @@ contract SocialRecoveryModuleTest is Test {
             maxPriorityFeePerGas: 10000,
             paymasterAndData: hex""
         });
-        userOperation.signature =
-            signUserOp(userOperation, _ownerPrivateKey, address(soulWalletInstence.soulWalletDefaultValidator()));
+        userOperation.signature = signUserOp(userOperation, _ownerPrivateKey, address(soulWalletDefaultValidator));
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
 
         ops[0] = userOperation;
