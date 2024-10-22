@@ -8,6 +8,7 @@ import "@source/libraries/TypeConversion.sol";
 import {ISoulWallet} from "@source/interfaces/ISoulWallet.sol";
 import "@source/abstract/DefaultCallbackHandler.sol";
 import {SoulWalletInstence} from "../soulwallet/base/SoulWalletInstence.sol";
+import {SoulWalletDefaultValidator} from "@source/validator/SoulWalletDefaultValidator.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 
 contract ValidatorSigDecoderTest is Test {
@@ -42,7 +43,9 @@ contract ValidatorSigDecoderTest is Test {
         console.logBytes32(passkeyOwner);
         owners[1] = passkeyOwner;
 
-        soulWalletInstence = new SoulWalletInstence(address(defaultCallbackHandler), owners, modules, hooks, salt);
+        soulWalletInstence = new SoulWalletInstence(
+            address(defaultCallbackHandler), address(new SoulWalletDefaultValidator()), owners, modules, hooks, salt
+        );
         soulWallet = soulWalletInstence.soulWallet();
         assertEq(soulWallet.isOwner(owner.toBytes32()), true);
         assertEq(soulWallet.isOwner(passkeyOwner), true);

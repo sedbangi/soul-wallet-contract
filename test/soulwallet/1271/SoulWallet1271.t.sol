@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../base/SoulWalletInstence.sol";
+import {SoulWalletDefaultValidator} from "@source/validator/SoulWalletDefaultValidator.sol";
 import "@source/libraries/TypeConversion.sol";
 import "@source/abstract/DefaultCallbackHandler.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
@@ -15,6 +16,7 @@ contract DeployDirectTest is Test {
 
     ISoulWallet soulWallet;
     SoulWalletInstence soulWalletInstence;
+    SoulWalletDefaultValidator soulWalletDefaultValidator;
     address public walletOwner;
     uint256 public walletOwnerPrivateKey;
     bytes32 private constant SOUL_WALLET_MSG_TYPEHASH = keccak256("SoulWalletMessage(bytes32 message)");
@@ -45,7 +47,10 @@ contract DeployDirectTest is Test {
         DefaultCallbackHandler defaultCallbackHandler = new DefaultCallbackHandler();
         bytes32[] memory owners = new bytes32[](1);
         owners[0] = walletOwner.toBytes32();
-        soulWalletInstence = new SoulWalletInstence(address(defaultCallbackHandler), owners, modules, hooks, salt);
+        soulWalletDefaultValidator = new SoulWalletDefaultValidator();
+        soulWalletInstence = new SoulWalletInstence(
+            address(defaultCallbackHandler), address(soulWalletDefaultValidator), owners, modules, hooks, salt
+        );
         soulWallet = soulWalletInstence.soulWallet();
     }
 
@@ -64,8 +69,7 @@ contract DeployDirectTest is Test {
     function testVerify1271Signature() public view {
         bytes32 hash = keccak256("hello world");
         bytes32 rawHash = encodeRawHash(hash, address(soulWallet));
-        bytes memory signature =
-            signMsg(walletOwnerPrivateKey, rawHash, address(soulWalletInstence.soulWalletDefaultValidator()));
+        bytes memory signature = signMsg(walletOwnerPrivateKey, rawHash, address(soulWalletDefaultValidator));
         console.log("soulwallet", address(soulWallet));
         bytes4 result = IERC1271(address(soulWallet)).isValidSignature(hash, signature);
         assertEq(result, MAGICVALUE);

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../../soulwallet/base/SoulWalletInstence.sol";
+import {SoulWalletDefaultValidator} from "@source/validator/SoulWalletDefaultValidator.sol";
 import {Crypto2FAHook} from "@source/hooks/2fa/Crypto2FAHook.sol";
 import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
 import {UserOpHelper} from "../../helper/UserOpHelper.t.sol";
@@ -17,6 +18,7 @@ contract Crypto2FAHookTest is Test, UserOpHelper {
     using MessageHashUtils for bytes32;
 
     SoulWalletInstence public soulWalletInstence;
+    SoulWalletDefaultValidator public soulWalletDefaultValidator;
     ISoulWallet public soulWallet;
     address public walletOwner;
     uint256 public walletOwnerPrivateKey;
@@ -41,9 +43,10 @@ contract Crypto2FAHookTest is Test, UserOpHelper {
 
         bytes32[] memory owners = new bytes32[](1);
         owners[0] = walletOwner.toBytes32();
-
+        soulWalletDefaultValidator = new SoulWalletDefaultValidator();
         bytes32 salt = bytes32(0);
-        soulWalletInstence = new SoulWalletInstence(address(0), owners, modules, hooks, salt);
+        soulWalletInstence =
+            new SoulWalletInstence(address(0), address(soulWalletDefaultValidator), owners, modules, hooks, salt);
         soulWallet = soulWalletInstence.soulWallet();
         (address[] memory preIsValidSignatureHooks, address[] memory preUserOpValidationHooks) = soulWallet.listHook();
         assertEq(preIsValidSignatureHooks.length, 1, "preIsValidSignatureHooks length error");
@@ -95,7 +98,7 @@ contract Crypto2FAHookTest is Test, UserOpHelper {
             soulWalletInstence.entryPoint(),
             userOperation,
             walletOwnerPrivateKey,
-            address(soulWalletInstence.soulWalletDefaultValidator()),
+            address(soulWalletDefaultValidator),
             hookAndData
         );
         ops[0] = userOperation;

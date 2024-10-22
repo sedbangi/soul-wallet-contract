@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../base/SoulWalletInstence.sol";
+import {SoulWalletDefaultValidator} from "@source/validator/SoulWalletDefaultValidator.sol";
+
 import "@source/libraries/TypeConversion.sol";
 import "@source/dev/tokens/TokenERC20.sol";
 import "@source/abstract/DefaultCallbackHandler.sol";
@@ -21,8 +23,9 @@ contract DeployDirectTest is Test {
         DefaultCallbackHandler defaultCallbackHandler = new DefaultCallbackHandler();
         bytes32[] memory owners = new bytes32[](1);
         owners[0] = address(this).toBytes32();
-        SoulWalletInstence soulWalletInstence =
-            new SoulWalletInstence(address(defaultCallbackHandler), owners,  modules, hooks,  salt);
+        SoulWalletInstence soulWalletInstence = new SoulWalletInstence(
+            address(defaultCallbackHandler), address(new SoulWalletDefaultValidator()), owners, modules, hooks, salt
+        );
         ISoulWallet soulWallet = soulWalletInstence.soulWallet();
         assertEq(soulWallet.isOwner(address(this).toBytes32()), true);
         assertEq(soulWallet.isOwner(address(0x1111).toBytes32()), false);
